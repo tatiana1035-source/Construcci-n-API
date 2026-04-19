@@ -1,33 +1,26 @@
-# Construcción API - Servicio Web de Autenticación
+Construcción de API - Registro e Inicio de Sesión
+Descripción
+Servicio web REST desarrollado con Node.js y Express para el registro e inicio de sesión de usuarios. Las contraseñas se almacenan encriptadas en MongoDB Atlas.
 
-## Descripción
-API REST para registro e inicio de sesión de usuarios, desarrollada como evidencia GA7-220501096-AA5-EV01.
+Tecnologías utilizadas
+Node.js - Entorno de ejecución de JavaScript
+Express - Framework para el servidor y rutas HTTP
+Nodemon - Reinicio automático del servidor en desarrollo
+MongoDB Atlas - Base de datos NoSQL en la nube
+Mongoose - Conexión y modelos de datos para MongoDB
+bcryptjs - Encriptación de contraseñas
+Postman - Testing de endpoints
+Endpoints
+Método	URL	Descripción
+POST	/api/auth/registro	Registro de nuevo usuario
+POST	/api/auth/login	Inicio de sesión
+Cómo ejecutar el proyecto
+Instalar dependencias:
+   npm install
+Crear archivo .env con: PORT=3000 MONGO_URI=tu_cadena_de_conexion_mongodb
 
-## Tecnologías
-- Node.js
-- Express.js
-- bcryptjs
+Ejecutar el servidor:
 
-## Endpoints
-
-### Registro de usuario
-- **Método:** POST
-- **URL:** /register
-- **Body:**
-```json
-{
-  "username": "sakuratendo",
-  "password": "123456"
-}
-```
-
-### Inicio de sesión
-- **Método:** POST  
-- **URL:** /login
-- **Respuesta exitosa:** Autenticación satisfactoria
-- **Respuesta error:** Error en la autenticación
-
-## Cómo ejecutar
-1. Instalar dependencias: `npm install`
-2. Correr el servidor: `node index.js`
-3. El servidor corre en: `http://localhost:3000`
+   node src/server.js
+Autor
+Tatiana - SENA
