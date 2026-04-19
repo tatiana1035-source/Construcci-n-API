@@ -1,39 +1,31 @@
-// Framework principal para crear el servidor web
+// Cargar las variables de entorno desde el archivo .env
+require('dotenv').config();
+
+// Importar Express para crear el servidor
 const express = require('express');
 
-// Permite peticiones desde otros orígenes
-const cors = require('cors');
+// Importar la función de conexión a MongoDB
+const connectDB = require('./utils/db');
 
-// Importamos las rutas de autenticación
+// Importar las rutas de autenticación
 const authRoutes = require('./routes/auth.routes');
 
 // Inicializar la aplicación Express
 const app = express();
-const PORT = 3000;
 
-// ── Middlewares ───────────────────────────────────────────
-// Permite recibir datos en formato JSON
+// Puerto del servidor, tomado del .env o por defecto 3000
+const PORT = process.env.PORT || 3000;
+
+// Middleware para leer el cuerpo de las peticiones en formato JSON
 app.use(express.json());
 
-// Habilita CORS para todos los orígenes
-app.use(cors());
+// Conectar a MongoDB Atlas
+connectDB();
 
-// ── Rutas ─────────────────────────────────────────────────
-// Todas las rutas de autenticación bajo el prefijo /api/auth
+// Registrar las rutas de autenticación bajo /api/auth
+// POST /api/auth/registro - Registro de usuario
+// POST /api/auth/login - Inicio de sesión
 app.use('/api/auth', authRoutes);
 
-// Ruta principal para verificar que el servidor está activo
-app.get('/', (req, res) => {
-  res.json({
-    mensaje: 'API de Autenticación activa',
-    endpoints: {
-      registro: 'POST /api/auth/registro',
-      login: 'POST /api/auth/login'
-    }
-  });
-});
-
-// ── Iniciar el servidor ───────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
-});
+// Iniciar el servidor y escuchar en el puerto definido
+app.listen(PORT, () => console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`));

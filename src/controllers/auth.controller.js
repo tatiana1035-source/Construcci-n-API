@@ -1,115 +1,74 @@
-// Módulo para encriptar contraseñas
+// Importar librería para encriptar contraseñas
 const bcrypt = require('bcryptjs');
 
-// Módulo para generar tokens de sesión
-const jwt = require('jsonwebtoken');
+// Importar mongoose para interactuar con MongoDB
+const mongoose = require('mongoose');
 
-// Importamos nuestra base de datos simulada
-const db = require('../utils/db');
+// Obtener el modelo de Usuario registrado en db.js
+const Usuario = mongoose.model('Usuario');
 
-// Clave secreta para firmar los tokens
-const JWT_SECRET = 'sena_api_secret_2024';
+// CONTROLADOR: Registro de usuario
+// Recibe username y password, valida, encripta la contraseña y guarda en MongoDB
+const registro = async (req, res) => {
+  // Extraer datos del cuerpo de la petición
+  const { username, password } = req.body;
 
-// ── REGISTRO ──────────────────────────────────────────────
-// Recibe usuario y contraseña, valida y guarda el nuevo usuario
-async function registro(req, res) {
-  const { usuario, contrasena } = req.body; // Extraer datos enviados
+  // Validar que se envíen los campos requeridos
+  if (!username || !password)
+    return res.status(400).json({ error: 'Usuario y contraseña son requeridos' });
 
-  // Validar que los campos no estén vacíos
-  if (!usuario || !contrasena) {
-    return res.status(400).json({
-      exito: false,
-      mensaje: 'El usuario y la contraseña son obligatorios'
-    });
+  try {
+    // Verificar si el usuario ya existe en la base de datos
+    const existe = await Usuario.findOne({ username });
+    if (existe)
+      return res.status(400).json({ error: 'El usuario ya existe' });
+
+    // Encriptar la contraseña antes de guardarla
+    const passwordEncriptada = await bcrypt.hash(password, 10);
+
+    // Crear y guardar el nuevo usuario en MongoDB
+    await Usuario.create({ username, password: passwordEncriptada });
+
+    // Responder con éxito
+    res.status(201).json({ message: 'Usuario registrado exitosamente' });
+  } catch (err) {
+    // Error interno del servidor
+    res.status(500).json({ error: 'Error en el servidor' });
   }
+};
 
-  // Verificar que el usuario no exista ya
-  const usuarioExistente = db.buscarPorUsuario(usuario);
-  if (usuarioExistente) {
-    return res.status(409).json({
-      exito: false,
-      mensaje: `El usuario "${usuario}" ya está registrado`
-    });
+// CONTROLADOR: Inicio de sesión
+// Recibe username y password, busca el usuario en MongoDB y valida la contraseña
+const login = async (req, res) => {
+  // Extraer datos del cuerpo de la petición
+  const { username, password } = req.body;
+
+  // Validar que se envíen los campos requeridos
+  if (!username || !password)
+    return res.status(400).json({ error: 'Usuario y contraseña son requeridos' });
+
+  try {
+    // Buscar el usuario en la base de datos por su nombre de usuario
+    const usuario = await Usuario.findOne({ username });
+
+    // Si no existe el usuario, retornar error de autenticación
+    if (!usuario)
+      return res.status(401).json({ error: 'Error en la autenticación' });
+
+    // Comparar la contraseña ingresada con la encriptada en la base de datos
+    const correcta = await bcrypt.compare(password, usuario.password);
+
+    // Si la contraseña no coincide, retornar error de autenticación
+    if (!correcta)
+      return res.status(401).json({ error: 'Error en la autenticación' });
+
+    // Autenticación exitosa
+    res.status(200).json({ message: 'Autenticación satisfactoria' });
+  } catch (err) {
+    // Error interno del servidor
+    res.status(500).json({ error: 'Error en el servidor' });
   }
+};
 
-  // Encriptar la contraseña antes de guardarla
-  const contrasenaEncriptada = await bcrypt.hash(contrasena, 10);
-
-  // Crear el objeto del nuevo usuario
-  const nuevoUsuario = {
-    id: Date.now().toString(), // ID único basado en la fecha
-    usuario: usuario.trim().toLowerCase(),
-    contrasena: contrasenaEncriptada,
-    fechaRegistro: new Date().toISOString()
-  };
-
-  // Guardar en la base de datos
-  db.guardar(nuevoUsuario);
-
-  // Respuesta exitosa
-  return res.status(201).json({
-    exito: true,
-    mensaje: `Usuario "${usuario}" registrado exitosamente`,
-    datos: {
-      id: nuevoUsuario.id,
-      usuario: nuevoUsuario.usuario,
-      fechaRegistro: nuevoUsuario.fechaRegistro
-    }
-  });
-}
-
-// ── LOGIN ─────────────────────────────────────────────────
-// Recibe usuario y contraseña, verifica y responde si es correcto
-async function login(req, res) {
-  const { usuario, contrasena } = req.body; // Extraer datos enviados
-
-  // Validar que los campos no estén vacíos
-  if (!usuario || !contrasena) {
-    return res.status(400).json({
-      exito: false,
-      mensaje: 'El usuario y la contraseña son obligatorios'
-    });
-  }
-
-  // Buscar el usuario en la base de datos
-  const usuarioEncontrado = db.buscarPorUsuario(usuario);
-
-  // Si no existe el usuario → error de autenticación
-  if (!usuarioEncontrado) {
-    return res.status(401).json({
-      exito: false,
-      mensaje: 'Error en la autenticación: usuario o contraseña incorrectos'
-    });
-  }
-
-  // Comparar la contraseña ingresada con la encriptada
-  const contrasenaValida = await bcrypt.compare(contrasena, usuarioEncontrado.contrasena);
-
-  // Si la contraseña no coincide → error de autenticación
-  if (!contrasenaValida) {
-    return res.status(401).json({
-      exito: false,
-      mensaje: 'Error en la autenticación: usuario o contraseña incorrectos'
-    });
-  }
-
-  // Generar token JWT válido por 1 hora
-  const token = jwt.sign(
-    { id: usuarioEncontrado.id, usuario: usuarioEncontrado.usuario },
-    JWT_SECRET,
-    { expiresIn: '1h' }
-  );
-
-  // ✅ Autenticación satisfactoria
-  return res.status(200).json({
-    exito: true,
-    mensaje: 'Autenticación satisfactoria',
-    datos: {
-      usuario: usuarioEncontrado.usuario,
-      token
-    }
-  });
-}
-
-// Exportar las funciones para usarlas en las rutas
+// Exportar los controladores para usarlos en las rutas
 module.exports = { registro, login };
